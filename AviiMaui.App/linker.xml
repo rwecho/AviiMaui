@@ -1,0 +1,11 @@
+<linker>
+  <!--
+    iOS Release/TestFlight builds use the linker/trimmer.
+    HybridWebView invokes these .NET methods by name (reflection), so they must be preserved.
+  -->
+  <assembly fullname="AviiMaui.App">
+    
+  </assembly>
+
+  
+</linker>

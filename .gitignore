@@ -1,0 +1,33 @@
+# .NET / MAUI
+**/bin/
+**/obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# MAUI / Xamarin
+**/Resources/**/Generated/
+
+# Logs
+*.log
+
+# macOS
+.DS_Store
+
+# Node
+**/node_modules/
+**/dist/
+**/dist-ssr/
+
+# VS Code
+.vscode/
+!.vscode/extensions.json
+
+# Rider / IntelliJ
+.idea/
+
+# Temp
+*.tmp
+.vs/
+**/Raw/wwwroot
