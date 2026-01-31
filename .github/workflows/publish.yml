@@ -125,7 +125,7 @@ jobs:
 
   # iOS 构建
   build-ios:
-    runs-on: self-hosted
+    runs-on: macos-latest
     needs: build-react
     
     steps:
