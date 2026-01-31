@@ -57,71 +57,71 @@ jobs:
           path: ./AviiMaui.IonicApp/dist
 
 
-  # Android 构建
-  build-android:
-    runs-on: macos-latest
-    needs: build-react
+  # # Android 构建
+  # build-android:
+  #   runs-on: macos-latest
+  #   needs: build-react
     
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
+  #     - name: Setup .NET
+  #       uses: actions/setup-dotnet@v4
+  #       with:
+  #         dotnet-version: '10.0.x'
       
-      - name: Install Android workload
-        run: |
-          dotnet workload install maui 
-          dotnet workload install android 
+  #     - name: Install Android workload
+  #       run: |
+  #         dotnet workload install maui 
+  #         dotnet workload install android 
 
-      - name: Download React build artifact
-        uses: actions/download-artifact@v7
-        with:
-          name: react-build
-          path: ./AviiMaui.App/Resources/Raw/wwwroot
+  #     - name: Download React build artifact
+  #       uses: actions/download-artifact@v7
+  #       with:
+  #         name: react-build
+  #         path: ./AviiMaui.App/Resources/Raw/wwwroot
 
-      - name: Retrieve the secret and decode it to a file
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > ./AviiMaui.App/keystore.jks
+  #     - name: Retrieve the secret and decode it to a file
+  #       env:
+  #         KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+  #       run: |
+  #         echo "$KEYSTORE_BASE64" | base64 --decode > ./AviiMaui.App/keystore.jks
 
-      - name: Restore dependencies
-        run: dotnet restore
-        working-directory: ./AviiMaui.App
+  #     - name: Restore dependencies
+  #       run: dotnet restore
+  #       working-directory: ./AviiMaui.App
 
-      - name: Build and publish Android
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          BUILD_VERSION: ${{ needs.build-react.outputs.build_version }}
-          DISPLAY_VERSION: ${{ needs.build-react.outputs.display_version }}
-        run: |
-          dotnet publish -f net10.0-android -c Release \
-           -p:AndroidKeyStore=true \
-           -p:AndroidSigningKeyStore=keystore.jks \
-           -p:AndroidSigningKeyAlias=avii_key \
-           -p:AndroidSigningStorePass=$KEYSTORE_PASSWORD \
-           -p:AndroidSigningKeyPass=$KEY_PASSWORD \
-           -p:ApplicationVersion=$BUILD_VERSION \
-           -p:ApplicationDisplayVersion=$DISPLAY_VERSION
-        working-directory: ./AviiMaui.App
+  #     - name: Build and publish Android
+  #       env:
+  #         KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+  #         KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+  #         BUILD_VERSION: ${{ needs.build-react.outputs.build_version }}
+  #         DISPLAY_VERSION: ${{ needs.build-react.outputs.display_version }}
+  #       run: |
+  #         dotnet publish -f net10.0-android -c Release \
+  #          -p:AndroidKeyStore=true \
+  #          -p:AndroidSigningKeyStore=keystore.jks \
+  #          -p:AndroidSigningKeyAlias=avii_key \
+  #          -p:AndroidSigningStorePass=$KEYSTORE_PASSWORD \
+  #          -p:AndroidSigningKeyPass=$KEY_PASSWORD \
+  #          -p:ApplicationVersion=$BUILD_VERSION \
+  #          -p:ApplicationDisplayVersion=$DISPLAY_VERSION
+  #       working-directory: ./AviiMaui.App
 
-      - name: Upload a Build Artifact
-        uses: actions/upload-artifact@v6
-        with:
-          name: android-build
-          path: "AviiMaui.App/bin/Release/net10.0-android/*.aab"
+  #     - name: Upload a Build Artifact
+  #       uses: actions/upload-artifact@v6
+  #       with:
+  #         name: android-build
+  #         path: "AviiMaui.App/bin/Release/net10.0-android/*.aab"
 
-      - name: Publish To Google Play
-        uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: "tech.zb.avii.maui.app"
-          releaseFiles: "AviiMaui.App/bin/Release/net10.0-android/tech.zb.avii.maui.app-Signed.aab"
-          track: "internal"
+  #     - name: Publish To Google Play
+  #       uses: r0adkll/upload-google-play@v1
+  #       with:
+  #         serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+  #         packageName: "tech.zb.tools.avii"
+  #         releaseFiles: "AviiMaui.App/bin/Release/net10.0-android/tech.zb.tools.avii-Signed.aab"
+  #         track: "internal"
 
   # iOS 构建
   build-ios:
@@ -159,9 +159,9 @@ jobs:
       - name: Setup provisioning profile
         env:
           PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
-          PROVISIONING_PROFILE_PATH: ${{ runner.temp }}/avii_maui.mobileprovision
+          PROVISIONING_PROFILE_PATH: ${{ runner.temp }}/tech.zb.tools.avii.mobileprovision
         run: |
-          rm -f ~/Library/MobileDevice/Provisioning\ Profiles/avii_maui.mobileprovision || true
+          rm -f ~/Library/MobileDevice/Provisioning\ Profiles/tech.zb.tools.avii.mobileprovision || true
           echo "$PROVISIONING_PROFILE_BASE64" | base64 -d > $PROVISIONING_PROFILE_PATH
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PROVISIONING_PROFILE_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
@@ -183,7 +183,7 @@ jobs:
       - name: Install Provisioning Profile
         uses: apple-actions/download-provisioning-profiles@v1
         with:
-          bundle-id: "tech.zb.avii.maui.app"
+          bundle-id: "tech.zb.tools.avii"
           # profile-type: "IOS_APP_STORE"
           issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
           api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}

@@ -22,7 +22,7 @@
 		<ApplicationTitle>Avii</ApplicationTitle>
 
 		<!-- App Identifier -->
-		<ApplicationId>tech.zb.avii.maui.app</ApplicationId>
+		<ApplicationId>tech.zb.tools.avii</ApplicationId>
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
