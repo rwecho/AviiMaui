@@ -30,4 +30,5 @@
 # Temp
 *.tmp
 .vs/
-**/Raw/wwwroot
+AviiMaui.App/Resources/Raw/wwwroot/*
+!AviiMaui.App/Resources/Raw/wwwroot/.folderholder
