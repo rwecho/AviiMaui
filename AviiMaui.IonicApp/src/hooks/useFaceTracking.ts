@@ -43,7 +43,7 @@ export function useFaceTracking(options: UseFaceTrackingOptions = {}) {
       if (result.error !== null) {
         console.warn(
           "[FaceTracking] Availability check warning:",
-          result.error
+          result.error,
         );
         setIsReady(false);
         return false;
@@ -126,6 +126,7 @@ export function useFaceTracking(options: UseFaceTrackingOptions = {}) {
         }
       } catch (err) {
         // Ignore parse errors
+        console.warn("[FaceTracking] Failed to parse message:", err);
       }
     };
 

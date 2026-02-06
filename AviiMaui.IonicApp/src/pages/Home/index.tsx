@@ -48,6 +48,9 @@ interface Live2DModel {
   scale: { set(x: number): void };
   destroy(): void;
   autoInteract: boolean;
+  interactive: boolean;
+  on(event: string, fn: (hitAreas: string[]) => void): void;
+  motion(group: string, index?: number, priority?: number): void;
 }
 
 function lerp(current: number, target: number, factor: number): number {
@@ -210,7 +213,32 @@ const HomePage: React.FC = () => {
         }
 
         modelRef.current = model as unknown as Live2DModel;
-        model.autoInteract = false;
+        
+        // Enable interaction
+        model.interactive = true;
+        model.autoInteract = true;
+        
+        // Handle hit events
+        model.on("hit", (hitAreas: string[]) => {
+          console.log("Hit areas:", hitAreas);
+          const hitString = hitAreas.join(", ");
+          
+          // Update debug info (prepend to keep history or just replace)
+          setDebugData(prev => {
+             // Keep strictly the face tracking data, but maybe add a helper toast or overlay?
+             // Actually, let's just log it to our debug overlay for now
+             return `Last Hit: ${hitString}\n` + prev.split('\n').filter(l => !l.startsWith('Last Hit:')).join('\n');
+          });
+
+          if (hitAreas.includes("Head")) {
+             model.motion("TapHead");
+          } else if (hitAreas.includes("Body")) {
+             model.motion("TapBody");
+          } else {
+             // Default generic tap
+             model.motion("Tap");
+          }
+        });
 
         model.anchor.set(0.5, 0.5);
         model.scale.set(0.15); // Scale factor

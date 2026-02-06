@@ -91,7 +91,7 @@ public partial class MauiBridge
 
             if (_faceTrackingService == null)
             {
-                return new { success = false, error = "Face tracking service not available" };
+                return new { success = false, error = (string?)"Face tracking service not available" };
             }
 
             var result = await _faceTrackingService.StartTrackingAsync();
