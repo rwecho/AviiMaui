@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { FaceLandmarker, FilesetResolver, DrawingUtils } from "@mediapipe/tasks-vision";
-import { Face } from "kalidokit";
+import { mauiBridgeService } from "../services/MauiBridgeService";
 
 export interface FaceTrackingResult {
   // Head rotation
@@ -24,187 +23,132 @@ export interface FaceTrackingResult {
 
 interface UseFaceTrackingOptions {
   onResult?: (result: FaceTrackingResult) => void;
+  // showVideo option is deprecated but kept for compatibility
   showVideo?: boolean;
 }
 
 export function useFaceTracking(options: UseFaceTrackingOptions = {}) {
-  const { onResult, showVideo = false } = options;
-
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const faceLandmarkerRef = useRef<FaceLandmarker | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
+  const { onResult } = options;
+  const onResultRef = useRef(onResult);
+  onResultRef.current = onResult;
 
   const [isReady, setIsReady] = useState(false);
   const [isTracking, setIsTracking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize MediaPipe FaceLandmarker
-  const initialize = useCallback(async () => {
+  // Check availability
+  const checkAvailability = useCallback(async () => {
     try {
-      console.log("[FaceTracking] Initializing MediaPipe...");
-
-      const vision = await FilesetResolver.forVisionTasks(
-        "/mediapipe/wasm"
-      );
-
-      const faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath:
-            "/mediapipe/models/face_landmarker.task",
-          delegate: "GPU",
-        },
-        runningMode: "VIDEO",
-        numFaces: 1,
-        outputFaceBlendshapes: true,
-        outputFacialTransformationMatrixes: true,
-      });
-
-      faceLandmarkerRef.current = faceLandmarker;
-      setIsReady(true);
-      console.log("[FaceTracking] MediaPipe initialized successfully");
-      return true;
+      const result = await mauiBridgeService.isFaceTrackingAvailable();
+      if (result.error !== null) {
+        console.warn(
+          "[FaceTracking] Availability check warning:",
+          result.error
+        );
+        setIsReady(false);
+        return false;
+      }
+      // result.data is boolean here
+      setIsReady(result.data);
+      return result.data;
     } catch (err) {
-      console.error("[FaceTracking] Failed to initialize:", err);
-      setError(err instanceof Error ? err.message : "初始化失败");
+      console.error("[FaceTracking] Failed to check availability:", err);
+      setIsReady(false);
       return false;
     }
   }, []);
 
-  // Start camera and tracking
+  // Start tracking
   const startTracking = useCallback(async () => {
-    if (!faceLandmarkerRef.current) {
-      setError("MediaPipe 尚未初始化");
-      return;
-    }
-
     try {
-      console.log("[FaceTracking] Starting camera...");
+      setError(null);
+      const result = await mauiBridgeService.startFaceTracking();
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          facingMode: "user",
-        },
-      });
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+      if (result.error || !result.data) {
+        setError(result.error || "Failed to start tracking (no data)");
+        return false;
       }
 
-      setIsTracking(true);
-      console.log("[FaceTracking] Camera started, beginning tracking loop");
-
-      // Start detection loop
-      const detect = () => {
-        if (!videoRef.current || !faceLandmarkerRef.current) return;
-
-        const video = videoRef.current;
-        if (video.readyState < 2) {
-          animationFrameRef.current = requestAnimationFrame(detect);
-          return;
-        }
-
-        const results = faceLandmarkerRef.current.detectForVideo(
-          video,
-          performance.now()
-        );
-
-        if (results.faceLandmarks && results.faceLandmarks.length > 0) {
-          const landmarks = results.faceLandmarks[0];
-
-          // Use Kalidokit to solve face rig
-          const faceRig = Face.solve(landmarks, {
-            runtime: "mediapipe",
-            video: video,
-          });
-
-          if (faceRig && onResult) {
-            const trackingResult: FaceTrackingResult = {
-              // Head rotation (Kalidokit uses rotationDegrees)
-              angleX: faceRig.head.y * 30, // Horizontal (left-right)
-              angleY: faceRig.head.x * 30, // Vertical (up-down)
-              angleZ: faceRig.head.z * 30, // Tilt
-
-              // Eyes (0-1 range)
-              eyeOpenL: 1 - faceRig.eye.l, // Invert: 0 = open, 1 = closed
-              eyeOpenR: 1 - faceRig.eye.r,
-              eyeBallX: faceRig.pupil?.x ?? 0,
-              eyeBallY: faceRig.pupil?.y ?? 0,
-
-              // Mouth
-              mouthOpen: faceRig.mouth.y,
-
-              // Eyebrows
-              browL: faceRig.brow ?? 0,
-              browR: faceRig.brow ?? 0,
-            };
-
-            onResult(trackingResult);
-          }
-
-          // Optional: Draw landmarks on debug canvas
-          if (showVideo && canvasRef.current) {
-            const ctx = canvasRef.current.getContext("2d");
-            if (ctx) {
-              ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-              const drawingUtils = new DrawingUtils(ctx);
-              drawingUtils.drawConnectors(
-                landmarks,
-                FaceLandmarker.FACE_LANDMARKS_TESSELATION,
-                { color: "#C0C0C070", lineWidth: 1 }
-              );
-            }
-          }
-        }
-
-        animationFrameRef.current = requestAnimationFrame(detect);
-      };
-
-      detect();
+      if (result.data.success) {
+        setIsTracking(true);
+        console.log("[FaceTracking] Started native tracking");
+        return true;
+      } else {
+        setError(result.data.error || "Failed to start tracking");
+        return false;
+      }
     } catch (err) {
-      console.error("[FaceTracking] Failed to start camera:", err);
-      setError(err instanceof Error ? err.message : "摄像头启动失败");
+      const message = err instanceof Error ? err.message : "Unknown error";
+      setError(message);
+      console.error("[FaceTracking] Failed to start:", err);
+      return false;
     }
-  }, [onResult, showVideo]);
-
-  // Stop tracking
-  const stopTracking = useCallback(() => {
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-
-    if (videoRef.current?.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach((track) => track.stop());
-      videoRef.current.srcObject = null;
-    }
-
-    setIsTracking(false);
-    console.log("[FaceTracking] Stopped tracking");
   }, []);
 
-  // Cleanup on unmount
+  // Stop tracking
+  const stopTracking = useCallback(async () => {
+    try {
+      await mauiBridgeService.stopFaceTracking();
+      setIsTracking(false);
+      console.log("[FaceTracking] Stopped native tracking");
+    } catch (err) {
+      console.error("[FaceTracking] Failed to stop:", err);
+    }
+  }, []);
+
+  // Listen for native messages
   useEffect(() => {
-    return () => {
-      stopTracking();
-      if (faceLandmarkerRef.current) {
-        faceLandmarkerRef.current.close();
+    const handleMessage = (event: HybridWebViewMessageEvent) => {
+      try {
+        const raw = event.detail?.message;
+        if (!raw) return;
+
+        const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+
+        if (parsed.type === "faceTracking" && parsed.data) {
+          const data = parsed.data;
+
+          // Map native data to FaceTrackingResult
+          const result: FaceTrackingResult = {
+            angleX: data.angleX || 0,
+            angleY: data.angleY || 0,
+            angleZ: data.angleZ || 0,
+            eyeOpenL: data.eyeOpenL || 0,
+            eyeOpenR: data.eyeOpenR || 0,
+            eyeBallX: data.eyeBallX || 0,
+            eyeBallY: data.eyeBallY || 0,
+            mouthOpen: data.mouthOpen || 0,
+            browL: data.browL || 0,
+            browR: data.browR || 0,
+          };
+
+          onResultRef.current?.(result);
+        }
+      } catch (err) {
+        // Ignore parse errors
       }
     };
-  }, [stopTracking]);
 
+    window.addEventListener("HybridWebViewMessageReceived", handleMessage);
+
+    // Initial check
+    void checkAvailability();
+
+    return () => {
+      window.removeEventListener("HybridWebViewMessageReceived", handleMessage);
+    };
+  }, [checkAvailability]);
+
+  // Normalize API to match previous hook structure where possible
   return {
-    videoRef,
-    canvasRef,
-    isReady,
+    isReady, // Replaces isReady (MediaPipe loaded) with isReady (Native available)
     isTracking,
     error,
-    initialize,
+    initialize: checkAvailability, // Alias for backward compat
     startTracking,
     stopTracking,
+    // Deprecated refs (kept null to avoid breaking destructuring)
+    videoRef: { current: null },
+    canvasRef: { current: null },
   };
 }

@@ -11,17 +11,14 @@ import {
   IonMenuButton,
 } from "@ionic/react";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { videocam, videocamOff, phonePortrait } from "ionicons/icons";
+import { videocam, videocamOff } from "ionicons/icons";
+import type { Application } from "pixi.js";
+
 import {
   useFaceTracking,
   FaceTrackingResult,
 } from "../../hooks/useFaceTracking";
-import {
-  useNativeFaceTracking,
-  NativeFaceTrackingData,
-} from "../../hooks/useNativeFaceTracking";
-import VersionFooter from "../../components/VersionFooter";
-import { apiService } from "../../services/apiService";
+import { mauiBridgeService } from "../../services/MauiBridgeService";
 
 // Local model from public folder
 const SAMPLE_MODEL_URL = "/hiyori_free_en/runtime/hiyori_free_t08.model3.json";
@@ -29,17 +26,41 @@ const SAMPLE_MODEL_URL = "/hiyori_free_en/runtime/hiyori_free_t08.model3.json";
 // Smoothing factor for parameter changes (0-1, lower = smoother)
 const LERP_FACTOR = 0.3;
 
+// Sensitivity scale factors
+const SCALES = {
+  angleX: 2.5,
+  angleY: 2.5,
+  angleZ: 2.5,
+  eyeBallX: 1.0,
+  eyeBallY: 1.0,
+};
+
+// Minimal interface for Live2DModel to avoid 'any'
+interface Live2DModel {
+  internalModel: {
+    coreModel: {
+      setParameterValueById(id: string, value: number): void;
+    };
+  };
+  x: number;
+  y: number;
+  anchor: { set(x: number, y: number): void };
+  scale: { set(x: number): void };
+  destroy(): void;
+  autoInteract: boolean;
+}
+
 function lerp(current: number, target: number, factor: number): number {
   return current + (target - current) * factor;
 }
 
 /**
- * Home Page (Refactored) - Features Live2D with Face Tracking
+ * Home Page - Features Live2D with Native Face Tracking
  */
 const HomePage: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const appRef = useRef<any>(null);
-  const modelRef = useRef<any>(null);
+  const appRef = useRef<Application | null>(null);
+  const modelRef = useRef<Live2DModel | null>(null);
   const currentParamsRef = useRef({
     angleX: 0,
     angleY: 0,
@@ -53,133 +74,109 @@ const HomePage: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [trackingMode, setTrackingMode] = useState<"none" | "native" | "web">(
-    "none",
-  );
   const [appVersion, setAppVersion] = useState<string>("");
+  
+  // Debug State
+  const [fps, setFps] = useState(0);
+  const [debugData, setDebugData] = useState<string>("");
+  const frameCountRef = useRef(0);
+  const lastTimeRef = useRef(Date.now());
 
-  // Load app version
+  // Load app version and prevent sleep
   useEffect(() => {
-    const loadVersion = async () => {
-      const res = await apiService.getSystemInfo();
+    const init = async () => {
+      // Load version
+      const res = await mauiBridgeService.getSystemInfo();
       if (res.error === null && res.data.appVersion) {
         setAppVersion(res.data.appVersion);
       } else {
         setAppVersion("1.0.0");
       }
+      
+      // Keep screen on
+      await mauiBridgeService.setKeepScreenOn(true);
     };
-    void loadVersion();
+    
+    void init();
+
+    return () => {
+      // Allow sleep when leaving this page
+      void mauiBridgeService.setKeepScreenOn(false);
+    };
   }, []);
 
   // Apply face data to Live2D model
-  const applyFaceData = useCallback(
-    (data: FaceTrackingResult | NativeFaceTrackingData) => {
-      const model = modelRef.current;
-      if (!model?.internalModel?.coreModel) return;
+  const applyFaceData = useCallback((data: FaceTrackingResult) => {
+    // FPS Calculation
+    frameCountRef.current++;
+    const now = Date.now();
+    if (now - lastTimeRef.current >= 1000) {
+      setFps(frameCountRef.current);
+      frameCountRef.current = 0;
+      lastTimeRef.current = now;
+    }
 
-      const coreModel = model.internalModel.coreModel;
-      const params = currentParamsRef.current;
+    // Update Debug Data (Throttled slightly by UI render, but good enough)
+    setDebugData(JSON.stringify(data, (key, val) => {
+        // Limit precision for display to keep it readable
+        return typeof val === 'number' ? Number(val.toFixed(2)) : val;
+    }, 2));
 
-      // Smooth the values
-      params.angleX = lerp(params.angleX, data.angleX, LERP_FACTOR);
-      params.angleY = lerp(params.angleY, data.angleY, LERP_FACTOR);
-      params.angleZ = lerp(params.angleZ, data.angleZ, LERP_FACTOR);
-      params.eyeOpenL = lerp(params.eyeOpenL, data.eyeOpenL, LERP_FACTOR);
-      params.eyeOpenR = lerp(params.eyeOpenR, data.eyeOpenR, LERP_FACTOR);
-      params.eyeBallX = lerp(params.eyeBallX, data.eyeBallX, LERP_FACTOR);
-      params.eyeBallY = lerp(params.eyeBallY, data.eyeBallY, LERP_FACTOR);
-      params.mouthOpen = lerp(params.mouthOpen, data.mouthOpen, LERP_FACTOR);
+    const model = modelRef.current;
+    if (!model?.internalModel?.coreModel) return;
 
-      try {
-        coreModel.setParameterValueById("ParamAngleX", params.angleX);
-        coreModel.setParameterValueById("ParamAngleY", params.angleY);
-        coreModel.setParameterValueById("ParamAngleZ", params.angleZ);
-        coreModel.setParameterValueById("ParamEyeLOpen", params.eyeOpenL);
-        coreModel.setParameterValueById("ParamEyeROpen", params.eyeOpenR);
-        coreModel.setParameterValueById("ParamEyeBallX", params.eyeBallX);
-        coreModel.setParameterValueById("ParamEyeBallY", params.eyeBallY);
-        coreModel.setParameterValueById("ParamMouthOpenY", params.mouthOpen);
-      } catch {
-        // Some models may not have all parameters
-      }
-    },
-    [],
-  );
+    const coreModel = model.internalModel.coreModel;
+    const params = currentParamsRef.current;
 
-  // Native (MAUI/ARKit) face tracking
+    // Apply sensitivity scaling
+    const targetAngleX = data.angleX * SCALES.angleX;
+    const targetAngleY = data.angleY * SCALES.angleY;
+    const targetAngleZ = data.angleZ * SCALES.angleZ;
+
+    // Smooth the values
+    params.angleX = lerp(params.angleX, targetAngleX, LERP_FACTOR);
+    params.angleY = lerp(params.angleY, targetAngleY, LERP_FACTOR);
+    params.angleZ = lerp(params.angleZ, targetAngleZ, LERP_FACTOR);
+    params.eyeOpenL = lerp(params.eyeOpenL, data.eyeOpenL, LERP_FACTOR);
+    params.eyeOpenR = lerp(params.eyeOpenR, data.eyeOpenR, LERP_FACTOR);
+    params.eyeBallX = lerp(params.eyeBallX, data.eyeBallX, LERP_FACTOR);
+    params.eyeBallY = lerp(params.eyeBallY, data.eyeBallY, LERP_FACTOR);
+    params.mouthOpen = lerp(params.mouthOpen, data.mouthOpen, LERP_FACTOR);
+
+    try {
+      coreModel.setParameterValueById("ParamAngleX", params.angleX);
+      coreModel.setParameterValueById("ParamAngleY", params.angleY);
+      coreModel.setParameterValueById("ParamAngleZ", params.angleZ);
+      coreModel.setParameterValueById("ParamEyeLOpen", params.eyeOpenL);
+      coreModel.setParameterValueById("ParamEyeROpen", params.eyeOpenR);
+      coreModel.setParameterValueById("ParamEyeBallX", params.eyeBallX);
+      coreModel.setParameterValueById("ParamEyeBallY", params.eyeBallY);
+      coreModel.setParameterValueById("ParamMouthOpenY", params.mouthOpen);
+    } catch {
+      // Some models may not have all parameters
+    }
+  }, []);
+
+
+  // Native face tracking hook
   const {
-    isNative,
-    isAvailable: isNativeAvailable,
-    isTracking: isNativeTracking,
-    error: nativeError,
-    startTracking: startNativeTracking,
-    stopTracking: stopNativeTracking,
-  } = useNativeFaceTracking({
-    onData: applyFaceData,
-  });
-
-  // Web (MediaPipe) face tracking
-  const {
-    videoRef,
-    isReady: isWebReady,
-    isTracking: isWebTracking,
-    error: webError,
-    initialize: initWebTracking,
-    startTracking: startWebTracking,
-    stopTracking: stopWebTracking,
+    isReady: isTrackingAvailable,
+    isTracking,
+    error: trackingError,
+    startTracking,
+    stopTracking,
   } = useFaceTracking({
     onResult: applyFaceData,
-    showVideo: false,
   });
 
-  // Toggle native tracking
-  const toggleNativeTracking = useCallback(async () => {
-    if (isNativeTracking) {
-      await stopNativeTracking();
-      setTrackingMode("none");
+  // Toggle tracking
+  const toggleTracking = useCallback(async () => {
+    if (isTracking) {
+      await stopTracking();
     } else {
-      // Stop web tracking if active
-      if (isWebTracking) {
-        stopWebTracking();
-      }
-      const success = await startNativeTracking();
-      if (success) {
-        setTrackingMode("native");
-      }
+      await startTracking();
     }
-  }, [
-    isNativeTracking,
-    isWebTracking,
-    startNativeTracking,
-    stopNativeTracking,
-    stopWebTracking,
-  ]);
-
-  // Toggle web tracking
-  const toggleWebTracking = useCallback(async () => {
-    if (isWebTracking) {
-      stopWebTracking();
-      setTrackingMode("none");
-    } else {
-      // Stop native tracking if active
-      if (isNativeTracking) {
-        await stopNativeTracking();
-      }
-      if (!isWebReady) {
-        await initWebTracking();
-      }
-      await startWebTracking();
-      setTrackingMode("web");
-    }
-  }, [
-    isWebTracking,
-    isNativeTracking,
-    isWebReady,
-    initWebTracking,
-    startWebTracking,
-    stopWebTracking,
-    stopNativeTracking,
-  ]);
+  }, [isTracking, startTracking, stopTracking]);
 
   // Initialize Live2D
   useEffect(() => {
@@ -190,7 +187,7 @@ const HomePage: React.FC = () => {
 
       try {
         const PIXI = await import("pixi.js");
-        (window as any).PIXI = PIXI;
+        window.PIXI = PIXI;
         // @ts-ignore
         const { Live2DModel } = await import("pixi-live2d-display/cubism4");
 
@@ -212,7 +209,7 @@ const HomePage: React.FC = () => {
           return;
         }
 
-        modelRef.current = model;
+        modelRef.current = model as unknown as Live2DModel;
         model.autoInteract = false;
 
         model.anchor.set(0.5, 0.5);
@@ -246,7 +243,7 @@ const HomePage: React.FC = () => {
     return () => {
       mounted = false;
       window.removeEventListener("resize", handleResize);
-      stopWebTracking();
+      stopTracking();
       if (modelRef.current) {
         modelRef.current.destroy();
         modelRef.current = null;
@@ -256,39 +253,40 @@ const HomePage: React.FC = () => {
         appRef.current = null;
       }
     };
-  }, [stopWebTracking]);
+  }, [stopTracking]);
 
-  const currentError = error || nativeError || webError;
-  const isAnyTracking = isNativeTracking || isWebTracking;
+  const currentError = error || trackingError;
 
   return (
     <IonPage>
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            {/* Keep Menu Button for access to debug logs/test pages if needed */}
             <IonMenuButton color="medium" />
           </IonButtons>
           <IonTitle>Avii</IonTitle>
           <IonButtons slot="end">
-            {/* Native tracking button (only show if in MAUI and available) */}
-            {isNative && isNativeAvailable && (
-              <IonButton onClick={toggleNativeTracking} disabled={loading}>
+            {/* Tracking Toggle Button - Only show if native tracking is available */}
+            {isTrackingAvailable ? (
+              <IonButton onClick={toggleTracking} disabled={loading}>
                 <IonIcon
                   slot="icon-only"
-                  icon={phonePortrait}
-                  color={isNativeTracking ? "success" : "medium"}
+                  icon={isTracking ? videocam : videocamOff}
+                  color={isTracking ? "success" : "medium"}
                 />
               </IonButton>
+            ) : (
+              !loading && (
+                <IonButton disabled>
+                  <IonIcon
+                    slot="icon-only"
+                    icon={videocamOff}
+                    color="medium"
+                    style={{ opacity: 0.5 }}
+                  />
+                </IonButton>
+              )
             )}
-            {/* Web tracking button */}
-            <IonButton onClick={toggleWebTracking} disabled={loading}>
-              <IonIcon
-                slot="icon-only"
-                icon={isWebTracking ? videocamOff : videocam}
-                color={isWebTracking ? "danger" : "primary"}
-              />
-            </IonButton>
           </IonButtons>
         </IonToolbar>
       </IonHeader>
@@ -310,70 +308,46 @@ const HomePage: React.FC = () => {
             }}
           />
 
-          {/* Camera Preview Window - visible when web tracking is active */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: 16,
-              left: 16,
-              width: 120,
-              height: 160,
-              borderRadius: 12,
-              overflow: "hidden",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
-              border: "2px solid rgba(255,255,255,0.2)",
-              backgroundColor: "#000",
-              display: isWebTracking ? "block" : "none",
-            }}
-          >
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                transform: "scaleX(-1)", // Mirror effect
-              }}
-            />
-            {/* Camera label */}
-            <div
-              style={{
-                position: "absolute",
-                bottom: 0,
-                left: 0,
-                right: 0,
-                backgroundColor: "rgba(0,0,0,0.6)",
-                color: "white",
-                fontSize: 10,
-                textAlign: "center",
-                padding: "2px 0",
-              }}
-            >
-              📷 摄像头
-            </div>
-          </div>
-
-          {/* Tracking Status */}
-          {isAnyTracking && (
+          {/* Tracking Status Indicator */}
+          {isTracking && (
             <div
               style={{
                 position: "absolute",
                 top: 16,
                 right: 16,
-                backgroundColor:
-                  trackingMode === "native"
-                    ? "rgba(0,150,255,0.8)"
-                    : "rgba(0,200,0,0.8)",
+                backgroundColor: "rgba(0,150,255,0.8)",
                 color: "white",
                 padding: "4px 12px",
                 borderRadius: 16,
                 fontSize: 12,
               }}
             >
-              ● {trackingMode === "native" ? "原生追踪" : "Web追踪"}
+              ● 面部追踪中
+            </div>
+          )}
+
+          {/* Debug Overlay */}
+          {isTracking && (
+            <div
+              style={{
+                position: "absolute",
+                top: 60,
+                left: 16,
+                padding: "10px",
+                backgroundColor: "rgba(0, 0, 0, 0.5)",
+                color: "#0f0",
+                borderRadius: "8px",
+                fontFamily: "monospace",
+                fontSize: "10px",
+                pointerEvents: "none",
+                maxWidth: "200px",
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
+                FPS: {fps}
+              </div>
+              <div>{debugData}</div>
             </div>
           )}
 

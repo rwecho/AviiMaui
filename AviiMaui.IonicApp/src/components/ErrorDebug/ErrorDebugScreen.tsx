@@ -15,7 +15,7 @@ import {
 } from "@ionic/react";
 import { copyOutline, refreshOutline } from "ionicons/icons";
 import { useMemo, useState } from "react";
-import { apiService } from "../../services/apiService";
+import { mauiBridgeService } from "../../services/MauiBridgeService";
 import "./ErrorDebugScreen.css";
 
 export type CapturedError = {
@@ -112,7 +112,7 @@ const ErrorDebugScreen = (props: ErrorDebugScreenProps) => {
 
   const handleCopy = async () => {
     const ok = await copyToClipboard(copyText);
-    apiService.showToast(ok ? "已复制完整堆栈" : "复制失败（系统限制）");
+    mauiBridgeService.showToast(ok ? "已复制完整堆栈" : "复制失败（系统限制）");
   };
 
   const handleReload = () => {
@@ -206,7 +206,6 @@ const ErrorDebugScreen = (props: ErrorDebugScreenProps) => {
             ) : null}
           </IonList>
         ) : null}
-
 
         {/* Toast 移除 */}
       </IonContent>

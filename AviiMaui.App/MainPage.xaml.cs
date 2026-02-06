@@ -194,6 +194,22 @@ public partial class MainPage : ContentPage
         // Ensure we are subscribed if the page re-appears.
         App.AppResumed -= OnAppResumed;
         App.AppResumed += OnAppResumed;
+
+        // Proactively request Camera permission to avoid TCC crashes in WebView
+        try
+        {
+            var status = await Permissions.CheckStatusAsync<Permissions.Camera>();
+            if (status != PermissionStatus.Granted)
+            {
+                _logger.LogInformation("Requesting Camera permission...");
+                status = await Permissions.RequestAsync<Permissions.Camera>();
+                _logger.LogInformation("Camera permission status: {Status}", status);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to request Camera permission");
+        }
     }
 
     private void OnAppResumed()

@@ -1,4 +1,4 @@
-import { apiService } from "../../services/apiService";
+import { mauiBridgeService } from "../../services/MauiBridgeService";
 
 export interface LogFile {
   fileName: string;
@@ -23,10 +23,10 @@ export interface LogContentResponse extends LogFileContent {
  * 获取日志文件列表
  */
 export async function getLogFiles(): Promise<GetLogsResponse> {
-  const result = await apiService.getLogFiles();
+  const result = await mauiBridgeService.getLogFiles();
   if (result.error !== null) {
-      console.error("Error fetching log files:", result.error);
-      return { files: [], error: result.error };
+    console.error("Error fetching log files:", result.error);
+    return { files: [], error: result.error };
   }
   // Safe cast since we know the structure from Bridge
   return result.data as GetLogsResponse;
@@ -38,10 +38,10 @@ export async function getLogFiles(): Promise<GetLogsResponse> {
 export async function getLogFileContent(
   fileName: string,
 ): Promise<LogContentResponse | null> {
-  const result = await apiService.getLogFileContent(fileName);
+  const result = await mauiBridgeService.getLogFileContent(fileName);
   if (result.error !== null) {
-      console.error("Error fetching log content:", result.error);
-      return null;
+    console.error("Error fetching log content:", result.error);
+    return null;
   }
   return result.data as LogContentResponse;
 }
@@ -50,15 +50,15 @@ export async function getLogFileContent(
  * 删除日志文件
  */
 export async function deleteLogFile(fileName: string): Promise<boolean> {
-  const result = await apiService.deleteLogFile(fileName);
-  return (result as any).data ?? true; // apiService returns Result<boolean> which is { error: string | null, data: boolean }
+  const result = await mauiBridgeService.deleteLogFile(fileName);
+  return (result as any).data ?? true; // mauiBridgeService returns Result<boolean> which is { error: string | null, data: boolean }
 }
 
 /**
  * 清空所有日志文件
  */
 export async function clearAllLogs(): Promise<boolean> {
-  const result = await apiService.clearAllLogs();
+  const result = await mauiBridgeService.clearAllLogs();
   return (result as any).data ?? true;
 }
 

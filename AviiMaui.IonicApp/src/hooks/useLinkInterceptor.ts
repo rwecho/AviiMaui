@@ -1,5 +1,6 @@
 import { useHistory } from "react-router-dom";
 import { useEffect } from "react";
+import { mauiBridgeService } from "../services/MauiBridgeService";
 
 export interface LinkHandlerOptions {
   onExternalLink?: (url: string) => boolean;
@@ -34,14 +35,8 @@ export const useLinkInterceptor = (options: LinkHandlerOptions = {}) => {
       } else {
         const handled = options.onExternalLink?.(href);
         if (handled !== true) {
-          try {
-            if (window.HybridWebView) {
-              window.HybridWebView.InvokeDotNet("OpenExternalLinkAsync", href);
-            }
-          } catch (error) {
-            console.error("Failed to open external link:", error);
-            window.open(href, "_blank");
-          }
+          // Use centralized mauiBridgeService to handle external links (supports both Native Bridge and Web Fallback)
+          void mauiBridgeService.openExternalLink(href);
         }
       }
     };

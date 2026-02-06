@@ -319,7 +319,7 @@ public partial class MauiBridge(ILogger<MauiBridge> logger)
     }
 
     /// <summary>
-    /// 从相册选择图片并返回 Base64 编码数据
+    /// 从相册选择图片并返Base64 编码数据
     /// </summary>
     /// <returns>JSON 格式结果，包含 base64 数据或错误信息</returns>
     public Task<string> PickImageAsync()
@@ -379,4 +379,21 @@ public partial class MauiBridge(ILogger<MauiBridge> logger)
             });
         });
     }
+
+    /// <summary>
+    /// 设置屏幕常亮
+    /// </summary>
+    /// <param name="keepOn">true 保持常亮，false 取消常亮</param>
+    public Task<string> SetKeepScreenOn(bool keepOn)
+    {
+        return ExecuteSafeVoidAsync(() =>
+        {
+            return MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                DeviceDisplay.Current.KeepScreenOn = keepOn;
+                logger.LogInformation("Bridge: SetKeepScreenOn = {KeepOn}", keepOn);
+            });
+        });
+    }
 }
+
