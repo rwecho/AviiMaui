@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { mauiBridgeService } from "../services/MauiBridgeService";
 
 export const DEFAULT_MODEL_URL =
-  "models/katou_01/katou_01.model.json";
+  "models/hiyori_free_en/runtime/hiyori_free_t08.model3.json";
 export const DEFAULT_LERP_FACTOR = 0.3;
 export const DEFAULT_MODEL_SCALE = 0.15;
 export const DEFAULT_MODEL_ROTATION = 0;
@@ -20,8 +20,6 @@ interface SettingsState {
   setLerpFactor: (val: number) => Promise<void>;
   setModelScale: (val: number) => Promise<void>;
   setModelRotation: (val: number) => Promise<void>;
-  importModel: () => Promise<void>;
-  installCommonModel: (url: string, name: string) => Promise<void>;
 
   // Initialization
   loadSettings: () => Promise<void>;
@@ -44,55 +42,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     await mauiBridgeService.setStringValue("settings_modelUrl", url);
   },
 
-  importModel: async () => {
-    try {
-      const result = await mauiBridgeService.importLive2DModel();
-      if (result.error) {
-        console.error("Import failed:", result.error);
-        await mauiBridgeService.showToast(`Import failed: ${result.error}`);
-        return;
-      }
-
-      if (result.data?.success && result.data?.modelPath) {
-        // Set the new model URL
-        const url = result.data.modelPath;
-        set({ modelUrl: url });
-        await mauiBridgeService.setStringValue("settings_modelUrl", url);
-        await mauiBridgeService.showToast(`Imported ${result.data.modelName}`);
-      } else if (result.data?.cancelled) {
-        console.log("Import cancelled");
-      }
-    } catch (e) {
-      console.error("Import error:", e);
-      await mauiBridgeService.showToast("Import error occurred");
-    }
-  },
-
-  installCommonModel: async (url: string, name: string) => {
-    try {
-      await mauiBridgeService.showToast(`Downloading ${name}...`);
-      const result = await mauiBridgeService.downloadAndInstallModel(url, name);
-      
-      if (result.error) {
-         console.error("Download failed:", result.error);
-         await mauiBridgeService.showToast(`Download failed: ${result.error}`);
-         return;
-      }
-      
-      if (result.data?.success && result.data?.modelPath) {
-         const path = result.data.modelPath;
-         set({ modelUrl: path });
-         await mauiBridgeService.setStringValue("settings_modelUrl", path);
-         await mauiBridgeService.showToast(`${name} installed and selected!`);
-      } else {
-         await mauiBridgeService.showToast("Download failed (unknown error)");
-      }
-    } catch (e) {
-      console.error("Install common model error:", e);
-      await mauiBridgeService.showToast("Installation error occurred");
-    }
-  },
-
   setLerpFactor: async (val: number) => {
     set({ lerpFactor: val });
     await mauiBridgeService.setStringValue("settings_lerpFactor", String(val));
@@ -105,7 +54,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   setModelRotation: async (val: number) => {
     set({ modelRotation: val });
-    await mauiBridgeService.setStringValue("settings_modelRotation", String(val));
+    await mauiBridgeService.setStringValue(
+      "settings_modelRotation",
+      String(val),
+    );
   },
 
   loadSettings: async () => {

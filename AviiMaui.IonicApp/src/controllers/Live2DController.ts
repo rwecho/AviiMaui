@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Application } from "pixi.js";
 import { FaceTrackingResult } from "../hooks/useFaceTracking";
 
@@ -99,12 +100,11 @@ export class Live2DController {
     console.log("[Live2DController] Loading Model:", modelUrl);
 
     try {
-      // @ts-ignore
       const { Live2DModel } = await import("pixi-live2d-display");
 
       // Cleanup old model
       if (this.model) {
-        this.app.stage.removeChild(this.model);
+        this.app.stage.removeChild(this.model as any);
         this.model.destroy();
         this.model = null;
       }
@@ -128,7 +128,7 @@ export class Live2DController {
       });
 
       // Add to Stage
-      this.app.stage.addChild(this.model);
+      this.app.stage.addChild(this.model as any);
 
       // Initial Layout
       this.handleResize();

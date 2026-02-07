@@ -19,21 +19,32 @@ import {
   FaceTrackingResult,
 } from "../../hooks/useFaceTracking";
 import { useSettingsStore } from "../../store/settingsStore";
-import {
-  Live2DViewer,
-  Live2DViewerRef,
-  ModelOption, 
-} from "../../components/Live2DViewer";
+import { Live2DViewer, Live2DViewerRef } from "../../components/Live2DViewer";
+import { ModelOption } from "../../components/Live2DViewer";
 
 const AVAILABLE_MODELS: ModelOption[] = [
   {
     name: "Hiyori",
     url: "models/hiyori_free_en/runtime/hiyori_free_t08.model3.json",
   },
-  { name: "Rem", url: "models/rem/rem.json" },
-  { name: "Katou", url: "models/katou_01/katou_01.model.json" },
-  { name: "Rice", url: "models/rice/rice.model3.json" },
-  { name: "Mashiro", url: "models/mashiro/seifuku.model.json" },
+  { name: "chitose", url: "models/chitose/runtime/chitose.model3.json" },
+  {
+    name: "natori",
+    url: "models/natori_pro_en/runtime/natori_pro_t06.model3.json",
+  },
+  { name: "rice", url: "models/rice_pro_en/runtime/rice_pro_t03.model3.json" },
+  {
+    name: "tororo",
+    url: "models/tororo_hijiki/tororo/runtime/tororo.model3.json",
+  },
+  {
+    name: "hijiki",
+    url: "models/tororo_hijiki/hijiki/runtime/hijiki.model3.json",
+  },
+  {
+    name: "wanko",
+    url: "models/wanko/runtime/wanko_touch.model3.json",
+  },
 ];
 
 const HomePage: React.FC = () => {
@@ -43,7 +54,6 @@ const HomePage: React.FC = () => {
     setModelUrl,
     lerpFactor,
     showDebugInfo,
-    loadSettings,
     modelScale,
     modelRotation,
   } = useSettingsStore();
@@ -52,11 +62,6 @@ const HomePage: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [displayError, setDisplayError] = useState<string | null>(null);
-
-  // Load Settings
-  useEffect(() => {
-    void loadSettings();
-  }, [loadSettings]);
 
   // Face Tracking
   const applyFaceData = useCallback((data: FaceTrackingResult) => {
@@ -106,10 +111,6 @@ const HomePage: React.FC = () => {
           </IonButtons>
           <IonTitle>Avii</IonTitle>
           <IonButtons slot="end">
-            <IonButton onClick={() => history.push("/settings")}>
-              <IonIcon slot="icon-only" icon={settingsOutline} />
-            </IonButton>
-
             <IonButton
               onClick={toggleTracking}
               disabled={!isTrackingAvailable || loading}
