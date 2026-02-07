@@ -33,6 +33,7 @@ import "@ionic/react/css/palettes/dark.class.css";
 /* Theme variables */
 import "./theme/variables.css";
 import HomePage from "./pages/Home";
+import SettingsPage from "./pages/Settings";
 import NotFoundPage from "./pages/NotFound";
 import LogsPage from "./pages/Logs";
 import { initColorMode } from "./theme/colorMode";
@@ -136,6 +137,7 @@ const App: React.FC = () => {
           <IonRouterOutlet>
             <Redirect exact from="/" to="/home" />
             <Route exact path="/home" component={HomePage} />
+            <Route exact path="/settings" component={SettingsPage} />
             <Route path="/logs" render={() => <LogsPage />} />
             <Route path="/test" render={() => <TestPage />} />
             <Route component={NotFoundPage} />

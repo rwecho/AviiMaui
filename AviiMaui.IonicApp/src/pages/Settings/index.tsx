@@ -18,12 +18,14 @@ import {
 import React from "react";
 import { settingsOutline } from "ionicons/icons";
 import { DEFAULT_MODEL_URL, useSettingsStore } from "../../store/settingsStore";
+import "./Settings.css";
 
 const SettingsPage: React.FC = () => {
   const {
     showDebugInfo,
     setShowDebugInfo,
     modelUrl,
+    setModelUrl,
     lerpFactor,
     setLerpFactor,
     modelScale,
@@ -31,7 +33,6 @@ const SettingsPage: React.FC = () => {
     modelRotation,
     setModelRotation,
   } = useSettingsStore();
-
 
   return (
     <IonPage>
@@ -67,7 +68,6 @@ const SettingsPage: React.FC = () => {
                 : modelUrl.split("/").pop() || "自定义"}
             </IonLabel>
           </IonItem>
-
 
           <IonListHeader>
             <IonLabel>内置模型 (Builtin)</IonLabel>
@@ -107,15 +107,13 @@ const SettingsPage: React.FC = () => {
               <IonButton
                 fill="outline"
                 slot="end"
+                color={modelUrl === model.path ? "success" : "medium"}
                 onClick={() => {
-                  debugger
-                  //  useSettingsStore.setState({ modelUrl: model.path });
-                  //  mauiBridgeService.setStringValue("settings_modelUrl", model.path);
-                  //  mauiBridgeService.showToast(`Selected ${model.name}`);
+                  setModelUrl(model.path);
                 }}
               >
                 <IonIcon slot="start" icon={settingsOutline} />
-                Switch
+                {modelUrl === model.path ? "Using" : "Switch"}
               </IonButton>
             </IonItem>
           ))}
@@ -126,7 +124,7 @@ const SettingsPage: React.FC = () => {
           <IonItem lines="none">
             <IonLabel>
               平滑度: {lerpFactor.toFixed(2)}
-              <p style={{ fontSize: "0.8em", color: "#666" }}>
+              <p className="settings-help">
                 值越小越平滑，但会有延迟 (推荐 0.1 - 0.5)
               </p>
             </IonLabel>
@@ -151,7 +149,7 @@ const SettingsPage: React.FC = () => {
           <IonItem lines="none">
             <IonLabel>
               缩放: {modelScale.toFixed(2)}
-              <p style={{ fontSize: "0.8em", color: "#666" }}>
+              <p className="settings-help">
                 调整模型显示大小 (推荐 0.05 - 0.5)
               </p>
             </IonLabel>
@@ -176,9 +174,7 @@ const SettingsPage: React.FC = () => {
           <IonItem lines="none">
             <IonLabel>
               角度: {modelRotation}°
-              <p style={{ fontSize: "0.8em", color: "#666" }}>
-                调整模型旋转角度 (-180° ~ 180°)
-              </p>
+              <p className="settings-help">调整模型旋转角度 (-180° ~ 180°)</p>
             </IonLabel>
           </IonItem>
           <IonItem>
