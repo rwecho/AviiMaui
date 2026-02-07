@@ -21,7 +21,8 @@ import {
 import { mauiBridgeService } from "../../services/MauiBridgeService";
 
 // Local model from public folder
-const SAMPLE_MODEL_URL = "/hiyori_free_en/runtime/hiyori_free_t08.model3.json";
+const SAMPLE_MODEL_URL =
+  "/models/hiyori_free_en/runtime/hiyori_free_t08.model3.json";
 
 // Smoothing factor for parameter changes (0-1, lower = smoother)
 const LERP_FACTOR = 0.3;
@@ -78,7 +79,7 @@ const HomePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [appVersion, setAppVersion] = useState<string>("");
-  
+
   // Debug State
   const [fps, setFps] = useState(0);
   const [debugData, setDebugData] = useState<string>("");
@@ -95,11 +96,11 @@ const HomePage: React.FC = () => {
       } else {
         setAppVersion("1.0.0");
       }
-      
+
       // Keep screen on
       await mauiBridgeService.setKeepScreenOn(true);
     };
-    
+
     void init();
 
     return () => {
@@ -120,10 +121,16 @@ const HomePage: React.FC = () => {
     }
 
     // Update Debug Data (Throttled slightly by UI render, but good enough)
-    setDebugData(JSON.stringify(data, (key, val) => {
-        // Limit precision for display to keep it readable
-        return typeof val === 'number' ? Number(val.toFixed(2)) : val;
-    }, 2));
+    setDebugData(
+      JSON.stringify(
+        data,
+        (key, val) => {
+          // Limit precision for display to keep it readable
+          return typeof val === "number" ? Number(val.toFixed(2)) : val;
+        },
+        2,
+      ),
+    );
 
     const model = modelRef.current;
     if (!model?.internalModel?.coreModel) return;
@@ -159,7 +166,6 @@ const HomePage: React.FC = () => {
       // Some models may not have all parameters
     }
   }, []);
-
 
   // Native face tracking hook
   const {
@@ -213,30 +219,36 @@ const HomePage: React.FC = () => {
         }
 
         modelRef.current = model as unknown as Live2DModel;
-        
+
         // Enable interaction
         model.interactive = true;
         model.autoInteract = true;
-        
+
         // Handle hit events
         model.on("hit", (hitAreas: string[]) => {
           console.log("Hit areas:", hitAreas);
           const hitString = hitAreas.join(", ");
-          
+
           // Update debug info (prepend to keep history or just replace)
-          setDebugData(prev => {
-             // Keep strictly the face tracking data, but maybe add a helper toast or overlay?
-             // Actually, let's just log it to our debug overlay for now
-             return `Last Hit: ${hitString}\n` + prev.split('\n').filter(l => !l.startsWith('Last Hit:')).join('\n');
+          setDebugData((prev) => {
+            // Keep strictly the face tracking data, but maybe add a helper toast or overlay?
+            // Actually, let's just log it to our debug overlay for now
+            return (
+              `Last Hit: ${hitString}\n` +
+              prev
+                .split("\n")
+                .filter((l) => !l.startsWith("Last Hit:"))
+                .join("\n")
+            );
           });
 
           if (hitAreas.includes("Head")) {
-             model.motion("TapHead");
+            model.motion("TapHead");
           } else if (hitAreas.includes("Body")) {
-             model.motion("TapBody");
+            model.motion("TapBody");
           } else {
-             // Default generic tap
-             model.motion("Tap");
+            // Default generic tap
+            model.motion("Tap");
           }
         });
 
