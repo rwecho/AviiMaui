@@ -9,7 +9,6 @@ namespace AviiMaui.App.Services.Bridge;
 /// </summary>
 public partial class MauiBridge
 {
-    private FaceTrackingService? _faceTrackingService;
     private HybridWebView? _webView;
 
     /// <summary>
@@ -20,16 +19,7 @@ public partial class MauiBridge
         _webView = webView;
     }
 
-    /// <summary>
-    /// 初始化面部追踪服务
-    /// </summary>
-    private void EnsureFaceTrackingService()
-    {
-        if (_faceTrackingService != null) return;
 
-        _faceTrackingService = new FaceTrackingService();
-        _faceTrackingService.OnFaceUpdate += OnFaceTrackingUpdate;
-    }
 
     /// <summary>
     /// 面部追踪数据更新回调
@@ -73,6 +63,10 @@ public partial class MauiBridge
                     logger.LogWarning(ex, "Failed to send face tracking data to WebView");
                 }
             });
+
+            // If configured as Sender, also send via Network
+            // We can just fire and forget
+            _ = _networkService.SendAsync(json);
         }
         catch (Exception ex)
         {
@@ -87,13 +81,7 @@ public partial class MauiBridge
     {
         return ExecuteSafeAsync(async () =>
         {
-            EnsureFaceTrackingService();
-
-            if (_faceTrackingService == null)
-            {
-                return new { success = false, error = (string?)"Face tracking service not available" };
-            }
-
+            // _faceTrackingService is injected and always available
             var result = await _faceTrackingService.StartTrackingAsync();
 
             if (result)
@@ -115,7 +103,7 @@ public partial class MauiBridge
     {
         return ExecuteSafeVoidAsync(() =>
         {
-            _faceTrackingService?.StopTracking();
+            _faceTrackingService.StopTracking();
             logger.LogInformation("Face tracking stopped");
             return Task.CompletedTask;
         });
@@ -144,7 +132,7 @@ public partial class MauiBridge
     {
         return ExecuteSafeAsync(() =>
         {
-            var isTracking = _faceTrackingService?.IsTracking ?? false;
+            var isTracking = _faceTrackingService.IsTracking;
             return Task.FromResult(new { isTracking });
         });
     }

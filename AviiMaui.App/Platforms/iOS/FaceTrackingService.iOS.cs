@@ -15,6 +15,8 @@ public partial class FaceTrackingService
     private ARSession? _arSession;
     private ARSessionDelegateHandler? _delegateHandler;
 
+    public event Action<FaceTrackingData>? OnFaceDataUpdated;
+
     /// <summary>
     /// 启动 ARKit 面部追踪
     /// </summary>
@@ -126,6 +128,7 @@ public partial class FaceTrackingService
         };
 
         RaiseFaceUpdate(data);
+        OnFaceDataUpdated?.Invoke(data);
     }
 
     /// <summary>

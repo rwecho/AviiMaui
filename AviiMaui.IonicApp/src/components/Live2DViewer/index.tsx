@@ -163,7 +163,7 @@ export const Live2DViewer = forwardRef<Live2DViewerRef, Live2DViewerProps>(
         if (showDebugInfo) {
           setDebugInfo(
             JSON.stringify(
-              data,
+              params,
               (key, val) =>
                 typeof val === "number" ? Number(val.toFixed(2)) : val,
               2,

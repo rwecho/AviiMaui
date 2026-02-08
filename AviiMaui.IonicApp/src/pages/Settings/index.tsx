@@ -14,8 +14,11 @@ import {
   IonToolbar,
   IonButton,
   IonIcon,
+  IonInput,
+  IonSelect,
+  IonSelectOption,
 } from "@ionic/react";
-import React from "react";
+import React, { useState } from "react";
 import { settingsOutline } from "ionicons/icons";
 import { DEFAULT_MODEL_URL, useSettingsStore } from "../../store/settingsStore";
 import "./Settings.css";
@@ -32,7 +35,19 @@ const SettingsPage: React.FC = () => {
     setModelScale,
     modelRotation,
     setModelRotation,
+    networkMode,
+    targetIp,
+    networkPort,
+    setNetworkMode,
+    setTargetIp,
+    setNetworkPort,
+    toggleNetwork,
   } = useSettingsStore();
+
+  // Local state for active toggle to match UI pattern?
+  // Let's assume if mode != off is selected, we want to configure it.
+  // And a separate "Enabled" switch to actual start/stop.
+  const [isNetworkActive, setIsNetworkActive] = useState(false);
 
   return (
     <IonPage>
@@ -56,6 +71,62 @@ const SettingsPage: React.FC = () => {
               onIonChange={(e) => setShowDebugInfo(e.detail.checked)}
             />
           </IonItem>
+
+          <IonListHeader>
+            <IonLabel>Remote Link (Windows/iOS)</IonLabel>
+          </IonListHeader>
+          <IonItem>
+            <IonLabel>Mode</IonLabel>
+            <IonSelect
+              value={networkMode}
+              onIonChange={(e) => setNetworkMode(e.detail.value)}
+              interface="popover"
+            >
+              <IonSelectOption value="off">Off</IonSelectOption>
+              <IonSelectOption value="sender">Sender (iOS)</IonSelectOption>
+              <IonSelectOption value="receiver">
+                Receiver (Windows)
+              </IonSelectOption>
+            </IonSelect>
+          </IonItem>
+
+          {networkMode !== "off" && (
+            <>
+              {networkMode === "sender" && (
+                <IonItem>
+                  <IonLabel position="stacked">Target IP (Windows PC)</IonLabel>
+                  <IonInput
+                    value={targetIp}
+                    onIonChange={(e) => setTargetIp(e.detail.value!)}
+                    placeholder="e.g. 192.168.1.100"
+                  />
+                </IonItem>
+              )}
+              <IonItem>
+                <IonLabel position="stacked">
+                  {networkMode === "sender" ? "Target Port" : "Listen Port"}
+                </IonLabel>
+                <IonInput
+                  type="number"
+                  value={networkPort}
+                  onIonChange={(e) =>
+                    setNetworkPort(parseInt(e.detail.value!, 10))
+                  }
+                />
+              </IonItem>
+
+              <IonItem>
+                <IonLabel>Active</IonLabel>
+                <IonToggle
+                  checked={isNetworkActive}
+                  onIonChange={(e) => {
+                    setIsNetworkActive(e.detail.checked);
+                    toggleNetwork(e.detail.checked);
+                  }}
+                />
+              </IonItem>
+            </>
+          )}
 
           <IonListHeader>
             <IonLabel>Live2D 模型</IonLabel>

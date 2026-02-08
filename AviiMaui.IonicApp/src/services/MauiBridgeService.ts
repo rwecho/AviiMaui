@@ -279,6 +279,38 @@ class MauiBridgeService {
   async setKeepScreenOn(keepOn: boolean): Promise<Result<void>> {
     return this.invokeVoid("SetKeepScreenOn", [keepOn]);
   }
+
+
+  // --- Network Linkage ---
+
+  async startNetworkSender(
+    ip: string,
+    port: number,
+  ): Promise<Result<{ success: boolean; error?: string }>> {
+    const schema = z.object({
+      success: z.boolean(),
+      error: z.string().optional(),
+    });
+    return this.invoke("StartNetworkSender", [ip, port], schema);
+  }
+
+  async startNetworkReceiver(
+    port: number,
+  ): Promise<Result<{ success: boolean; error?: string }>> {
+    const schema = z.object({
+      success: z.boolean(),
+      error: z.string().optional(),
+    });
+    return this.invoke("StartNetworkReceiver", [port], schema);
+  }
+
+  async stopNetwork(): Promise<Result<{ success: boolean; error?: string }>> {
+    const schema = z.object({
+      success: z.boolean(),
+      error: z.string().optional(),
+    });
+    return this.invoke("StopNetwork", [], schema);
+  }
 }
 
 export const mauiBridgeService = new MauiBridgeService();

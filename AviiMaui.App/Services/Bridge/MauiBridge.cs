@@ -3,13 +3,67 @@ using Microsoft.Extensions.Logging;
 using CommunityToolkit.Maui.Alerts;
 using Plugin.Firebase.Analytics;
 
+using AviiMaui.App.Services.FaceTracking;
+
 namespace AviiMaui.App.Services.Bridge;
 
 /// <summary>
 /// Maui Bridge 服务 - 用于与 JavaScript 通信
 /// </summary>
-public partial class MauiBridge(ILogger<MauiBridge> logger)
+public partial class MauiBridge
 {
+    private readonly ILogger<MauiBridge> logger;
+    private readonly FaceTrackingService _faceTrackingService;
+    private readonly AviiMaui.App.Services.NetworkService _networkService;
+
+#if IOS
+    public MauiBridge(ILogger<MauiBridge> logger,
+        FaceTrackingService faceTrackingService,
+        AviiMaui.App.Services.NetworkService networkService
+        )
+#else
+    public MauiBridge(ILogger<MauiBridge> logger,
+        FaceTrackingService faceTrackingService,
+        AviiMaui.App.Services.NetworkService networkService
+        )
+#endif
+    {
+        this.logger = logger;
+        _faceTrackingService = faceTrackingService;
+        _networkService = networkService;
+
+        // Subscribe to face tracking updates for WebView
+        _faceTrackingService.OnFaceUpdate += OnFaceTrackingUpdate;
+        _networkService.OnDataReceived += OnNetworkDataReceived;
+    }
+
+    private void OnNetworkDataReceived(string data)
+    {
+        if (_webView == null) return;
+        
+        // Ensure on main thread
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+             try
+             {
+                 // We receive raw JSON face data from sender
+                 // We can direct it to the webview. 
+                 // The webview expects { type: "faceTracking", data: ... }
+                 // The sender (see OnFaceTrackingUpdate) constructs this message.
+                 // So we can assume the data is already in correct format or needs wrapping?
+                 // Let's assume the sender sends the *inner* data or the *whole* message?
+                 // To be compatible with existing frontend, let's look at OnFaceTrackingUpdate.
+                 // It sends { type="faceTracking", data={...} }.
+                 // We should probably send the same structure over UDP.
+                 // For now, let's assume raw message passing.
+                 _webView.SendRawMessage(data);
+             }
+             catch(Exception ex)
+             {
+                 logger.LogWarning("Failed to relay network data: {Message}", ex.Message);
+             }
+        });
+    }
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -393,6 +447,42 @@ public partial class MauiBridge(ILogger<MauiBridge> logger)
                 DeviceDisplay.Current.KeepScreenOn = keepOn;
                 logger.LogInformation("Bridge: SetKeepScreenOn = {KeepOn}", keepOn);
             });
+        });
+    }
+
+
+
+
+
+    // --- Network (UDP) ---
+
+    // For Sender (iOS)
+    public Task<string> StartNetworkSender(string ip, int port)
+    {
+        return ExecuteSafeVoidAsync(() =>
+        {
+            _networkService.SetTarget(ip, port);
+            return Task.CompletedTask;
+        });
+    }
+
+    // For Receiver (Windows)
+    public Task<string> StartNetworkReceiver(int port)
+    {
+        return ExecuteSafeVoidAsync(() =>
+        {
+            _networkService.StartListening(port);
+            return Task.CompletedTask;
+        });
+    }
+
+    public Task<string> StopNetwork()
+    {
+        return ExecuteSafeVoidAsync(() =>
+        {
+            _networkService.StopListening();
+            // Also maybe clear target?
+            return Task.CompletedTask;
         });
     }
 }

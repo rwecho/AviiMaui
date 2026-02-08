@@ -10,9 +10,8 @@ import {
   IonMenuButton,
   IonSpinner,
 } from "@ionic/react";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback } from "react";
 import { videocam, videocamOff, settingsOutline } from "ionicons/icons";
-import { useHistory } from "react-router-dom";
 
 import {
   useFaceTracking,
@@ -48,7 +47,6 @@ const AVAILABLE_MODELS: ModelOption[] = [
 ];
 
 const HomePage: React.FC = () => {
-  const history = useHistory();
   const {
     modelUrl,
     setModelUrl,
@@ -120,6 +118,10 @@ const HomePage: React.FC = () => {
                 slot="icon-only"
                 icon={isTracking ? videocam : videocamOff}
               />
+            </IonButton>
+
+            <IonButton routerLink="/settings">
+              <IonIcon slot="icon-only" icon={settingsOutline} />
             </IonButton>
           </IonButtons>
         </IonToolbar>

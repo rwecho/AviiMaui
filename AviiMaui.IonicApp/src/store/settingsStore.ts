@@ -13,6 +13,11 @@ interface SettingsState {
   lerpFactor: number;
   modelScale: number;
   modelRotation: number;
+  
+  // Network Linkage
+  networkMode: "off" | "sender" | "receiver";
+  targetIp: string;
+  networkPort: number;
 
   // Actions
   setShowDebugInfo: (show: boolean) => Promise<void>;
@@ -20,6 +25,11 @@ interface SettingsState {
   setLerpFactor: (val: number) => Promise<void>;
   setModelScale: (val: number) => Promise<void>;
   setModelRotation: (val: number) => Promise<void>;
+  
+  setNetworkMode: (mode: "off" | "sender" | "receiver") => Promise<void>;
+  setTargetIp: (ip: string) => Promise<void>;
+  setNetworkPort: (port: number) => Promise<void>;
+  toggleNetwork: (enabled: boolean) => Promise<void>;
 
   // Initialization
   loadSettings: () => Promise<void>;
@@ -31,6 +41,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   lerpFactor: DEFAULT_LERP_FACTOR,
   modelScale: DEFAULT_MODEL_SCALE,
   modelRotation: DEFAULT_MODEL_ROTATION,
+  networkMode: "off",
+  targetIp: "192.168.1.100", // Default placeholder
+  networkPort: 9000,
 
   setShowDebugInfo: async (show: boolean) => {
     set({ showDebugInfo: show });
@@ -60,6 +73,36 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     );
   },
 
+
+
+  setNetworkMode: async (mode) => {
+    set({ networkMode: mode });
+    // Also stop current network if switching
+    await mauiBridgeService.stopNetwork();
+  },
+
+  setTargetIp: async (ip) => {
+    set({ targetIp: ip });
+  },
+
+  setNetworkPort: async (port) => {
+    set({ networkPort: port });
+  },
+
+  toggleNetwork: async (enabled) => {
+    const { networkMode, targetIp, networkPort } = get();
+    if (!enabled) {
+        await mauiBridgeService.stopNetwork();
+        return;
+    }
+
+    if (networkMode === "sender") {
+        await mauiBridgeService.startNetworkSender(targetIp, networkPort);
+    } else if (networkMode === "receiver") {
+        await mauiBridgeService.startNetworkReceiver(networkPort);
+    }
+  },
+
   loadSettings: async () => {
     try {
       // Parallel fetch
@@ -70,6 +113,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
           mauiBridgeService.getStringValue("settings_lerpFactor"),
           mauiBridgeService.getStringValue("settings_modelScale"),
           mauiBridgeService.getStringValue("settings_modelRotation"),
+
         ]);
 
       set({
@@ -84,6 +128,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         modelRotation: rotationRes.data
           ? parseFloat(rotationRes.data)
           : DEFAULT_MODEL_ROTATION,
+
       });
     } catch (e) {
       console.error("Failed to load settings:", e);

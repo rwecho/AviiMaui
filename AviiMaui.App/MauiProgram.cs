@@ -2,6 +2,7 @@
 using Serilog;
 using AviiMaui.App.Services.Bridge;
 using AviiMaui.App.Services;
+using AviiMaui.App.Services.FaceTracking;
 using CommunityToolkit.Maui;
 
 namespace AviiMaui.App;
@@ -41,6 +42,10 @@ public static class MauiProgram
 			loggingBuilder.AddSerilog(dispose: true);
 		});
 
+
+		// 注册 Services
+		builder.Services.AddSingleton<FaceTrackingService>();
+		builder.Services.AddSingleton<AviiMaui.App.Services.NetworkService>();
 
 		// 注册 Bridge 服务
 		builder.Services.AddSingleton<MauiBridge>();
