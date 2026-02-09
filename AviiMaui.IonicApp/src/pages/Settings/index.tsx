@@ -42,12 +42,8 @@ const SettingsPage: React.FC = () => {
     setTargetIp,
     setNetworkPort,
     toggleNetwork,
+    isNetworkActive,
   } = useSettingsStore();
-
-  // Local state for active toggle to match UI pattern?
-  // Let's assume if mode != off is selected, we want to configure it.
-  // And a separate "Enabled" switch to actual start/stop.
-  const [isNetworkActive, setIsNetworkActive] = useState(false);
 
   return (
     <IonPage>
@@ -120,74 +116,12 @@ const SettingsPage: React.FC = () => {
                 <IonToggle
                   checked={isNetworkActive}
                   onIonChange={(e) => {
-                    setIsNetworkActive(e.detail.checked);
                     toggleNetwork(e.detail.checked);
                   }}
                 />
               </IonItem>
             </>
           )}
-
-          <IonListHeader>
-            <IonLabel>Live2D 模型</IonLabel>
-          </IonListHeader>
-          <IonItem>
-            <IonLabel>当前模型</IonLabel>
-            <IonLabel slot="end" style={{ fontSize: "0.8em", color: "#888" }}>
-              {modelUrl === DEFAULT_MODEL_URL
-                ? "Hiyori (内置)"
-                : modelUrl.split("/").pop() || "自定义"}
-            </IonLabel>
-          </IonItem>
-
-          <IonListHeader>
-            <IonLabel>内置模型 (Builtin)</IonLabel>
-          </IonListHeader>
-          {[
-            {
-              name: "Hiyori (V3)",
-              path: "models/hiyori_free_en/runtime/hiyori_free_t08.model3.json",
-              desc: "Cubism 4.0 Sample",
-            },
-            {
-              name: "Kato Megumi (V2)",
-              path: "models/katou_01/katou_01.model.json",
-              desc: "Saekano (Live2D v2)",
-            },
-            {
-              name: "Mashiro Seifuku (V2)",
-              path: "models/mashiro/seifuku.model.json",
-              desc: "Sakurasou (Uniform)",
-            },
-            {
-              name: "Mashiro Shifuku (V2)",
-              path: "models/mashiro/shifuku.model.json",
-              desc: "Sakurasou (Casual)",
-            },
-            {
-              name: "Rem (V2)",
-              path: "models/rem/rem.json",
-              desc: "Re:Zero",
-            },
-          ].map((model) => (
-            <IonItem key={model.name}>
-              <IonLabel>
-                <h2>{model.name}</h2>
-                <p>{model.desc}</p>
-              </IonLabel>
-              <IonButton
-                fill="outline"
-                slot="end"
-                color={modelUrl === model.path ? "success" : "medium"}
-                onClick={() => {
-                  setModelUrl(model.path);
-                }}
-              >
-                <IonIcon slot="start" icon={settingsOutline} />
-                {modelUrl === model.path ? "Using" : "Switch"}
-              </IonButton>
-            </IonItem>
-          ))}
 
           <IonListHeader>
             <IonLabel>平滑参数 (Lerp)</IonLabel>

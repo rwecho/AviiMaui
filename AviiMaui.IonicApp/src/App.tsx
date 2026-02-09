@@ -42,6 +42,7 @@ import FatalErrorBoundary from "./components/ErrorDebug/FatalErrorBoundary";
 import ErrorDebugScreen, {
   CapturedError,
 } from "./components/ErrorDebug/ErrorDebugScreen";
+import { useSettingsStore } from "./store/settingsStore"; // Import store
 
 // 配置 Ionic 确保跨平台一致性
 setupIonicReact({
@@ -61,6 +62,8 @@ const App: React.FC = () => {
 
   useEffect(() => {
     initColorMode();
+    // Load settings on app start
+    useSettingsStore.getState().loadSettings();
   }, []);
 
   // 为原生 Android 返回键提供路由状态检查
