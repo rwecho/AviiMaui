@@ -69,7 +69,7 @@ export const Live2DViewer = forwardRef<Live2DViewerRef, Live2DViewerProps>(
       onModelChange,
       scale = 0.15,
       rotation = 0,
-      lerpFactor = 0.3,
+      lerpFactor = 0.5,
       showDebugInfo = false,
       onLoad,
       onError,

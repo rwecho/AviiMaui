@@ -12,29 +12,22 @@ import {
   IonTitle,
   IonToggle,
   IonToolbar,
-  IonButton,
-  IonIcon,
   IonInput,
   IonSelect,
   IonSelectOption,
 } from "@ionic/react";
-import React, { useState } from "react";
-import { settingsOutline } from "ionicons/icons";
-import { DEFAULT_MODEL_URL, useSettingsStore } from "../../store/settingsStore";
+import React from "react";
+import { useSettingsStore } from "../../store/settingsStore";
 import "./Settings.css";
 
 const SettingsPage: React.FC = () => {
   const {
     showDebugInfo,
     setShowDebugInfo,
-    modelUrl,
-    setModelUrl,
     lerpFactor,
     setLerpFactor,
     modelScale,
     setModelScale,
-    modelRotation,
-    setModelRotation,
     networkMode,
     targetIp,
     networkPort,
@@ -170,29 +163,6 @@ const SettingsPage: React.FC = () => {
             >
               <div slot="start">远</div>
               <div slot="end">近</div>
-            </IonRange>
-          </IonItem>
-
-          <IonListHeader>
-            <IonLabel>模型旋转 (Rotation)</IonLabel>
-          </IonListHeader>
-          <IonItem lines="none">
-            <IonLabel>
-              角度: {modelRotation}°
-              <p className="settings-help">调整模型旋转角度 (-180° ~ 180°)</p>
-            </IonLabel>
-          </IonItem>
-          <IonItem>
-            <IonRange
-              min={-180}
-              max={180}
-              step={1}
-              value={modelRotation}
-              onIonChange={(e) => setModelRotation(e.detail.value as number)}
-              labelPlacement="start"
-            >
-              <div slot="start">-180°</div>
-              <div slot="end">180°</div>
             </IonRange>
           </IonItem>
         </IonList>

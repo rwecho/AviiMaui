@@ -9,10 +9,10 @@ namespace AviiMaui.App.Services
     {
         private readonly ILogger<NetworkService> _logger;
         private UdpClient _udpClient;
-        private IPEndPoint _remoteEndPoint;
-        private CancellationTokenSource _cts;
+        private IPEndPoint? _remoteEndPoint;
+        private CancellationTokenSource? _cts;
 
-        public event Action<string> OnDataReceived;
+        public event Action<string>? OnDataReceived;
 
         public NetworkService(ILogger<NetworkService> logger)
         {
@@ -89,6 +89,7 @@ namespace AviiMaui.App.Services
                 {
                     var result = await _udpClient.ReceiveAsync(token);
                     string data = Encoding.UTF8.GetString(result.Buffer);
+                    _logger.LogInformation($"Received data from {result.RemoteEndPoint}: {data}");
                     OnDataReceived?.Invoke(data);
                 }
             }
